@@ -29,7 +29,8 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 100
 #load input file
 process.source = cms.Source('PoolSource',
     fileNames = cms.untracked.vstring(
-	'root://cms-xrd-global.cern.ch//store/mc/RunIIWinter15GenOnly/GluGluHToGG_M125_13TeV_powheg2_minloHJJ_pythia8/GEN/MCRUN2_71_V1-v2/110000/04485D22-A46A-E711-B25D-0025904E41E4.root'
+	#'root://cms-xrd-global.cern.ch//store/mc/RunIIWinter15GenOnly/GluGluHToGG_M125_13TeV_powheg2_minloHJJ_pythia8/GEN/MCRUN2_71_V1-v2/110000/04485D22-A46A-E711-B25D-0025904E41E4.root'
+	'root://cms-xrd-global.cern.ch//store/mc/RunIIWinter15GenOnly/GluGluHToGG_M125_13TeV_powheg2_minloHJJ_pythia8/GEN/MCRUN2_71_V1-v2/110000/1E9D9DAB-616A-E711-B44A-002590E50AFE.root'
     )
 )
 
@@ -46,9 +47,9 @@ process.TFileService = cms.Service("TFileService",
 #########################paratmeters for the tuplizer##############################
 process.ntuples = cms.EDAnalyzer('GenPhotonTuplizer',
 genParticles = cms.InputTag("genParticles"),
-genJets = cms.InputTag("ak4GenJets")
+genJets = cms.InputTag("ak4GenJets"),
+genInfo = cms.InputTag("generator", "", "GEN")
 #lheInfo = cms.InputTag("externalLHEProducer", "", "LHE"),
-#genInfo = cms.InputTag("generator", "", "GEN")
 )
 
 #define path

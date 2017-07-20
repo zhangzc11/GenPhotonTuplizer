@@ -18,10 +18,12 @@ GenPhotonTuplizer::GenPhotonTuplizer(const edm::ParameterSet& iConfig)
 	//get parameters from iConfig
  	genParticlesToken_ 	= consumes<reco::GenParticleCollection>(iConfig.getParameter<edm::InputTag>("genParticles"));
  	genJetsToken_ 		= consumes<reco::GenJetCollection>(iConfig.getParameter<edm::InputTag>("genJets")); 
+	genInfoToken_		= consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfo"));
 
 	edm::Service<TFileService> fs;
 	GenEvents = fs->make<TTree>("GenEvents", "gen events");	
-
+	sumWeights = fs->make<TH1D>("sumWeights",";;sumWeights;",1,-0.5,0.5);
+	sumWeights_Hgg = fs->make<TH1D>("sumWeights_Hgg",";;sumWeights_Hgg;",1,-0.5,0.5);//sum of weights of events with Hgg
 }
 
 
@@ -43,17 +45,17 @@ void GenPhotonTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup&
         runNum = iEvent.id().run();
         lumiNum = iEvent.luminosityBlock();
         eventNum = iEvent.id().event();
+	genWeight = genInfo->weight();
+	sumWeights->Fill(0.,genWeight);
 
 //genJets
-	for(const reco::GenJet &j : *genJets){
-        genJetE->push_back(j.energy());
-        genJetPt->push_back(j.pt());
-        genJetEta->push_back(j.eta());
-        genJetPhi->push_back(j.phi());
-        nGenJets++;
-    	}
+	fillGenJets();
+	
 //genParticles
 	fillGenParticles();
+
+//fill Hgg events - GEN level
+	fillGenHgg();	
 
 //fill output ntuple
 	GenEvents->Fill();
@@ -65,7 +67,7 @@ void GenPhotonTuplizer::loadEvent(const edm::Event& iEvent, const edm::EventSetu
 {
 	iEvent.getByToken(genParticlesToken_,genParticles);
 	iEvent.getByToken(genJetsToken_,genJets);
-
+	iEvent.getByToken(genInfoToken_,genInfo);
 }
 
 
@@ -73,11 +75,7 @@ void GenPhotonTuplizer::loadEvent(const edm::Event& iEvent, const edm::EventSetu
 // ------------ method called once each job just before starting event loop  ------------
 void GenPhotonTuplizer::beginJob()
 {
-
-
 	setBranches();
-
-
 }
 
 //------ Method called once each job just after ending the event loop ------//
@@ -102,13 +100,11 @@ void GenPhotonTuplizer::endRun(edm::Run const&, edm::EventSetup const&)
 // set branch address
 void GenPhotonTuplizer::setBranches()
 {
-
-
-
 	genJetE = new std::vector<float>;
 	genJetPt = new std::vector<float>;
 	genJetEta = new std::vector<float>;
 	genJetPhi = new std::vector<float>;
+	genJetIsFromHiggsPhoton = new std::vector<bool>;
 
 	genParticleMotherId = new std::vector<int>;
 	genParticleMotherIndex = new std::vector<int>;
@@ -125,6 +121,7 @@ void GenPhotonTuplizer::setBranches()
 	genJetPt->clear();
 	genJetEta->clear();
 	genJetPhi->clear();
+	genJetIsFromHiggsPhoton->clear();
 	
 	genParticleMotherId->clear();
 	genParticleMotherIndex->clear();
@@ -141,12 +138,15 @@ void GenPhotonTuplizer::setBranches()
   	GenEvents->Branch("runNum", &runNum, "runNum/i");
   	GenEvents->Branch("lumiNum", &lumiNum, "lumiNum/i");
   	GenEvents->Branch("eventNum", &eventNum, "eventNum/i");
+	GenEvents->Branch("genWeight", &genWeight, "genWeight/F");
   	GenEvents->Branch("nGenParticles", &nGenParticles, "nGenParticles/I");
   	GenEvents->Branch("nGenJets", &nGenJets, "nGenJets/I");
+  	GenEvents->Branch("nGenJets_cut", &nGenJets_cut, "nGenJets_cut/I");
 	GenEvents->Branch("genJetE", "vector<float>", &genJetE);
 	GenEvents->Branch("genJetPt", "vector<float>", &genJetPt);
 	GenEvents->Branch("genJetEta", "vector<float>", &genJetEta);
 	GenEvents->Branch("genJetPhi", "vector<float>", &genJetPhi);
+	GenEvents->Branch("genJetIsFromHiggsPhoton", "vector<bool>", &genJetIsFromHiggsPhoton);
   	
 	GenEvents->Branch("nGenParticles", &nGenParticles, "nGenParticles/I");
 	GenEvents->Branch("genParticleMotherId", "vector<int>", &genParticleMotherId);
@@ -159,7 +159,24 @@ void GenPhotonTuplizer::setBranches()
 	GenEvents->Branch("genParticlePt", "vector<float>", &genParticlePt);
 	GenEvents->Branch("genParticleEta", "vector<float>", &genParticleEta);
 	GenEvents->Branch("genParticlePhi", "vector<float>", &genParticlePhi);
-  	
+  
+		
+	GenEvents->Branch("genHiggs_pho1_E", &genHiggs_pho1_E, "genHiggs_pho1_E/F");
+	GenEvents->Branch("genHiggs_pho1_Pt", &genHiggs_pho1_Pt, "genHiggs_pho1_Pt/F");
+	GenEvents->Branch("genHiggs_pho1_Eta", &genHiggs_pho1_Eta, "genHiggs_pho1_Eta/F");
+	GenEvents->Branch("genHiggs_pho1_Phi", &genHiggs_pho1_Phi, "genHiggs_pho1_Phi/F");
+	GenEvents->Branch("genHiggs_pho1_Iso", &genHiggs_pho1_Iso, "genHiggs_pho1_Iso/F");
+
+	GenEvents->Branch("genHiggs_pho2_E", &genHiggs_pho2_E, "genHiggs_pho2_E/F");
+	GenEvents->Branch("genHiggs_pho2_Pt", &genHiggs_pho2_Pt, "genHiggs_pho2_Pt/F");
+	GenEvents->Branch("genHiggs_pho2_Eta", &genHiggs_pho2_Eta, "genHiggs_pho2_Eta/F");
+	GenEvents->Branch("genHiggs_pho2_Phi", &genHiggs_pho2_Phi, "genHiggs_pho2_Phi/F");
+	GenEvents->Branch("genHiggs_pho2_Iso", &genHiggs_pho2_Iso, "genHiggs_pho2_Iso/F");
+
+	GenEvents->Branch("genHiggs_M", &genHiggs_M, "genHiggs_M/F");
+	GenEvents->Branch("genHiggs_Pt", &genHiggs_Pt, "genHiggs_Pt/F");
+	GenEvents->Branch("genHiggs_Eta", &genHiggs_Eta, "genHiggs_Eta/F");
+	GenEvents->Branch("genHiggs_Phi", &genHiggs_Phi, "genHiggs_Phi/F");
 
 }
 
@@ -169,13 +186,16 @@ void GenPhotonTuplizer::resetBranches()
 	runNum = -1;
 	lumiNum = -1;
 	eventNum = -1;
-	
+
+	genWeight = 1;	
 
 	nGenJets = 0;
+	nGenJets_cut = 0;
 	genJetE->clear();
 	genJetPt->clear();
 	genJetEta->clear();
 	genJetPhi->clear();
+	genJetIsFromHiggsPhoton->clear();
 	
 
 	nGenParticles = 0;
@@ -189,6 +209,24 @@ void GenPhotonTuplizer::resetBranches()
 	genParticlePt->clear();
 	genParticleEta->clear();
 	genParticlePhi->clear();
+
+	genHiggs_pho1_Pt = 0.0;
+	genHiggs_pho1_Eta = 0.0;
+	genHiggs_pho1_Phi = 0.0;
+	genHiggs_pho1_E = 0.0;
+	genHiggs_pho1_Iso = 0.0;
+	
+	genHiggs_pho2_Pt = 0.0;
+	genHiggs_pho2_Eta = 0.0;
+	genHiggs_pho2_Phi = 0.0;
+	genHiggs_pho2_E = 0.0;
+	genHiggs_pho2_Iso = 0.0;
+
+	genHiggs_M = 0.0;
+	genHiggs_Pt = 0.0;
+	genHiggs_Eta = 0.0;
+	genHiggs_Phi = 0.0;
+	
 }
 
 
@@ -196,6 +234,102 @@ void GenPhotonTuplizer::fillDescriptions(edm::ConfigurationDescriptions& descrip
       	edm::ParameterSetDescription desc;
       	desc.setUnknown();
       	descriptions.addDefault(desc);
+}
+
+void GenPhotonTuplizer::fillGenHgg()
+{
+	std::map<float, int> index_pt_map;
+	
+	for(int i=0;i<nGenParticles;i++)
+	{
+		if(genParticleId->at(i) == 22 && genParticleMotherId->at(i) == 25) 
+		{
+			index_pt_map.insert(std::pair<float, int>(-1.0*genParticlePt->at(i), i));
+		}
+	}
+
+	if(index_pt_map.size() < 2) return;
+	
+	int ind_pho1 = 0;
+	int ind_pho2 = 0;
+	int ind_temp = 0;
+	for (auto tmp :index_pt_map)
+	{
+		if(ind_temp == 0) ind_pho1 = tmp.second;
+		else if(ind_temp == 1) ind_pho2 = tmp.second;
+		else break;
+		ind_temp ++;
+	}
+
+	TLorentzVector pho1(0,0,0,0);
+	TLorentzVector pho2(0,0,0,0);
+	TLorentzVector higgs(0,0,0,0);
+	
+	pho1.SetPtEtaPhiE(genParticlePt->at(ind_pho1), genParticleEta->at(ind_pho1),  genParticlePhi->at(ind_pho1),  genParticleE->at(ind_pho1));
+	pho2.SetPtEtaPhiE(genParticlePt->at(ind_pho2), genParticleEta->at(ind_pho2),  genParticlePhi->at(ind_pho2),  genParticleE->at(ind_pho2));
+	
+	higgs = pho1 + pho2;
+	
+	genHiggs_pho1_Pt = pho1.Pt();	
+	genHiggs_pho1_Eta = pho1.Eta();	
+	genHiggs_pho1_Phi = pho1.Phi();	
+	genHiggs_pho1_E = pho1.E();	
+	
+	genHiggs_pho2_Pt = pho2.Pt();	
+	genHiggs_pho2_Eta = pho2.Eta();	
+	genHiggs_pho2_Phi = pho2.Phi();	
+	genHiggs_pho2_E = pho2.E();	
+
+	genHiggs_M = higgs.M();
+	genHiggs_Pt = higgs.Pt();
+	genHiggs_Eta = higgs.Eta();
+	genHiggs_Phi = higgs.Phi();
+	
+	sumWeights_Hgg->Fill(0.,genWeight);	
+
+}
+
+void GenPhotonTuplizer::fillGenJets()
+{
+
+	for(const reco::GenJet &j : *genJets)
+	{
+		genJetE->push_back(j.energy());
+		genJetPt->push_back(j.pt());
+		genJetEta->push_back(j.eta());
+		genJetPhi->push_back(j.phi());
+		nGenJets++;
+		bool fromGenPhoton = false;
+
+		std::vector< const reco::GenParticle * > jetGenParticles = j.getGenConstituents();
+		for(size_t i=0; i<jetGenParticles.size();i++)
+		{
+			const reco::Candidate * prunedV = 0;
+			prunedV =  jetGenParticles[i];
+			if(prunedV->pdgId() == 22)
+			{
+
+				if(prunedV->numberOfMothers() > 0)
+				{
+					const reco::Candidate* firstMotherWithDifferentID = findFirstMotherWithDifferentID(prunedV);
+					if (firstMotherWithDifferentID && firstMotherWithDifferentID->pdgId() == 25)
+					{
+						fromGenPhoton = true;	
+						break;
+					}
+				}
+
+			}
+		}
+	
+		genJetIsFromHiggsPhoton->push_back(fromGenPhoton);
+
+		if((!fromGenPhoton) && fabs(j.eta())<2.5 && j.pt()>30)
+		{	
+			nGenJets_cut ++;
+		}
+    	}
+
 }
 
 

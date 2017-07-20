@@ -71,16 +71,23 @@ private:
 	virtual void resetBranches(); // clear all variables
    	virtual void setBranches(); // set branch of ntuple
 	virtual void fillGenParticles();
+	virtual void fillGenJets();
+	virtual void fillGenHgg();
 	const reco::Candidate* findFirstMotherWithDifferentID(const reco::Candidate *particle);
 	const reco::Candidate* findOriginalMotherWithSameID(const reco::Candidate *particle);
 
- //output TTree and file
+ //output TTree and histograms
       	TTree *GenEvents;
+
+	TH1D *sumWeights;
+	TH1D *sumWeights_Hgg;
 
  //variables to be saved in the pi0 ntuple
       	uint    runNum;
       	uint    lumiNum;
       	uint    eventNum;
+
+	float genWeight;
 
 	int 	nGenParticles;
 	vector<int> * genParticleMotherId;
@@ -95,22 +102,44 @@ private:
 	vector<float> * genParticlePhi;
 
 	int nGenJets;
+	int nGenJets_cut;
 	vector<float> * genJetE;
 	vector<float> * genJetPt;
 	vector<float> * genJetEta;
 	vector<float> * genJetPhi;
-	
+	vector<bool> * genJetIsFromHiggsPhoton;
+
+
+	float genHiggs_pho1_E;		
+	float genHiggs_pho1_Pt;		
+	float genHiggs_pho1_Eta;		
+	float genHiggs_pho1_Phi;		
+	float genHiggs_pho1_Iso;		
+
+	float genHiggs_pho2_E;		
+	float genHiggs_pho2_Pt;		
+	float genHiggs_pho2_Eta;		
+	float genHiggs_pho2_Phi;		
+	float genHiggs_pho2_Iso;		
+
+	float genHiggs_M;
+	float genHiggs_Pt;
+	float genHiggs_Eta;
+	float genHiggs_Phi;
 
 	
  //input tags
- edm::EDGetTokenT<reco::GenParticleCollection> genParticlesToken_;
- edm::EDGetTokenT<reco::GenJetCollection> genJetsToken_;
+ 	edm::EDGetTokenT<reco::GenParticleCollection> genParticlesToken_;
+ 	edm::EDGetTokenT<reco::GenJetCollection> genJetsToken_;
+ 	edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
+	
  //input collections
- edm::Handle<reco::GenParticleCollection> genParticles;
- edm::Handle<reco::GenJetCollection> genJets;
+ 	edm::Handle<reco::GenParticleCollection> genParticles;
+ 	edm::Handle<reco::GenJetCollection> genJets;
+	edm::Handle<GenEventInfoProduct> genInfo;
 
  //cuts and options read from cfg file	
- 
+	 
  
 };
 
