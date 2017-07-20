@@ -14,7 +14,7 @@ scram p CMSSW CMSSW_7_1_25_patch5
 fi
 cd CMSSW_7_1_25_patch5/src
 eval `scram runtime -sh`
-git clone https://github.com/zhangzc11/GenPhotonTuplizer.git GenPhoton/GenPhotonTuplizer
+git clone git@github.com:zhangzc11/GenPhotonTuplizer.git GenPhoton/GenPhotonTuplizer
 scram b
 ```
 -----------------------------

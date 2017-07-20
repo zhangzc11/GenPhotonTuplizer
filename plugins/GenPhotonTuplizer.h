@@ -32,6 +32,7 @@
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
 #include "DataFormats/Common/interface/Handle.h"
 
+#include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
@@ -46,7 +47,8 @@
 using namespace std;
 using namespace edm;
 
-#define NPhoMAX 300
+#define OBJECTARRAYSIZE 1000
+#define GENPARTICLEARRAYSIZE 500
 
 class GenPhotonTuplizer : public edm::EDAnalyzer {
 public:
@@ -68,6 +70,9 @@ private:
    	void loadEvent(const edm::Event& iEvent, const edm::EventSetup& iSetup); //call at the beginning of each event to get input handles from the python config
 	virtual void resetBranches(); // clear all variables
    	virtual void setBranches(); // set branch of ntuple
+	virtual void fillGenParticles();
+	const reco::Candidate* findFirstMotherWithDifferentID(const reco::Candidate *particle);
+	const reco::Candidate* findOriginalMotherWithSameID(const reco::Candidate *particle);
 
  //output TTree and file
       	TTree *GenEvents;
@@ -76,12 +81,33 @@ private:
       	uint    runNum;
       	uint    lumiNum;
       	uint    eventNum;
+
 	int 	nGenParticles;
+	vector<int> * genParticleMotherId;
+	vector<int> * genParticleMotherIndex;
+	vector<int> * genParticleId;
+	vector<bool> * genParticleIsPromptDecayed;
+	vector<bool> * genParticleIsPromptFinalState;
+	vector<int> * genParticleStatus;
+	vector<float> * genParticleE;
+	vector<float> * genParticlePt;
+	vector<float> * genParticleEta;
+	vector<float> * genParticlePhi;
+
+	int nGenJets;
+	vector<float> * genJetE;
+	vector<float> * genJetPt;
+	vector<float> * genJetEta;
+	vector<float> * genJetPhi;
+	
+
 	
  //input tags
  edm::EDGetTokenT<reco::GenParticleCollection> genParticlesToken_;
+ edm::EDGetTokenT<reco::GenJetCollection> genJetsToken_;
  //input collections
  edm::Handle<reco::GenParticleCollection> genParticles;
+ edm::Handle<reco::GenJetCollection> genJets;
 
  //cuts and options read from cfg file	
  

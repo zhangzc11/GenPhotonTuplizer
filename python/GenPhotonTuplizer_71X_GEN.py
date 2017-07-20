@@ -45,8 +45,10 @@ process.TFileService = cms.Service("TFileService",
 
 #########################paratmeters for the tuplizer##############################
 process.ntuples = cms.EDAnalyzer('GenPhotonTuplizer',
-genParticles = cms.InputTag("genParticles")
-#genJets = cms.InputTag("ak4GenJets")
+genParticles = cms.InputTag("genParticles"),
+genJets = cms.InputTag("ak4GenJets")
+#lheInfo = cms.InputTag("externalLHEProducer", "", "LHE"),
+#genInfo = cms.InputTag("generator", "", "GEN")
 )
 
 #define path
