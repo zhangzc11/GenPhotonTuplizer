@@ -1,4 +1,4 @@
-# Pi0Tuplizer
+# GenPhotonTuplizer
 Simple photon tuplizer with GEN input
 =============================
 -----------------------------
