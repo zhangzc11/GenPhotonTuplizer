@@ -24,6 +24,8 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
+#include "DataFormats/Math/interface/deltaR.h"
+
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
@@ -47,8 +49,6 @@
 using namespace std;
 using namespace edm;
 
-#define OBJECTARRAYSIZE 1000
-#define GENPARTICLEARRAYSIZE 500
 
 class GenPhotonTuplizer : public edm::EDAnalyzer {
 public:
@@ -138,7 +138,8 @@ private:
  	edm::Handle<reco::GenJetCollection> genJets;
 	edm::Handle<GenEventInfoProduct> genInfo;
 
- //cuts and options read from cfg file	
+ //cuts and options
+ 	const float isoConeSize = 0.3;
 	 
  
 };

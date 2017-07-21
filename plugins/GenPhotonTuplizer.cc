@@ -242,7 +242,7 @@ void GenPhotonTuplizer::fillGenHgg()
 	
 	for(int i=0;i<nGenParticles;i++)
 	{
-		if(genParticleId->at(i) == 22 && genParticleMotherId->at(i) == 25) 
+		if(genParticleId->at(i) == 22 && genParticleMotherId->at(i) == 25 && genParticleStatus->at(i)==1) 
 		{
 			index_pt_map.insert(std::pair<float, int>(-1.0*genParticlePt->at(i), i));
 		}
@@ -286,6 +286,22 @@ void GenPhotonTuplizer::fillGenHgg()
 	genHiggs_Phi = higgs.Phi();
 	
 	sumWeights_Hgg->Fill(0.,genWeight);	
+	
+//gen level isolation
+	float iso_sum_pho1 = 0.0;
+	float iso_sum_pho2 = 0.0;
+	
+	for(size_t i=0; i<genParticles->size();i++)
+        {
+		if((*genParticles)[i].status()==1)
+		{
+			if(reco::deltaR((*genParticles)[i].eta(), (*genParticles)[i].phi(), pho1.Eta(), pho1.Phi()) < isoConeSize && fabs(pho1.Pt() - (*genParticles)[i].pt()) > 0.001 ) iso_sum_pho1 += (*genParticles)[i].et();			
+			if(reco::deltaR((*genParticles)[i].eta(), (*genParticles)[i].phi(), pho2.Eta(), pho2.Phi()) < isoConeSize && fabs(pho2.Pt() - (*genParticles)[i].pt()) > 0.001 ) iso_sum_pho2 += (*genParticles)[i].et();			
+		}
+	}
+	
+	genHiggs_pho1_Iso = iso_sum_pho1;
+	genHiggs_pho2_Iso = iso_sum_pho2;
 
 }
 
