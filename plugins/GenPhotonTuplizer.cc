@@ -19,11 +19,19 @@ GenPhotonTuplizer::GenPhotonTuplizer(const edm::ParameterSet& iConfig)
  	genParticlesToken_ 	= consumes<reco::GenParticleCollection>(iConfig.getParameter<edm::InputTag>("genParticles"));
  	genJetsToken_ 		= consumes<reco::GenJetCollection>(iConfig.getParameter<edm::InputTag>("genJets")); 
 	genInfoToken_		= consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfo"));
+	lheInfoToken_		= consumes<LHEEventProduct>(iConfig.getParameter<edm::InputTag>("lheInfo"));
 
 	edm::Service<TFileService> fs;
 	GenEvents = fs->make<TTree>("GenEvents", "gen events");	
 	sumWeights = fs->make<TH1D>("sumWeights",";;sumWeights;",1,-0.5,0.5);
 	sumWeights_Hgg = fs->make<TH1D>("sumWeights_Hgg",";;sumWeights_Hgg;",1,-0.5,0.5);//sum of weights of events with Hgg
+	
+	sumScaleWeights = fs->make<TH1D>("sumScaleWeights",";;sumScaleWeights;",9,-0.5,8.5);
+	sumPdfWeights = fs->make<TH1D>("sumPdfWeights",";;sumPdfWeights;",100,-0.5,99.5);
+
+	sumScaleWeights_Hgg = fs->make<TH1D>("sumScaleWeights_Hgg",";;sumScaleWeights_Hgg;",9,-0.5,8.5);
+	sumPdfWeights_Hgg = fs->make<TH1D>("sumPdfWeights_Hgg",";;sumPdfWeights_Hgg;",100,-0.5,99.5);
+
 }
 
 
@@ -48,6 +56,29 @@ void GenPhotonTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup&
 	genWeight = genInfo->weight();
 	sumWeights->Fill(0.,genWeight);
 
+	double nomlheweight = lheInfo->weights()[0].wgt;
+	
+	if (lheInfo->weights().size()>=9) 
+	{  
+	  	for (unsigned int iwgt=0; iwgt<9; ++iwgt) 
+		{
+	    		double wgtval = lheInfo->weights()[iwgt].wgt*genWeight/nomlheweight;
+	    		scaleWeights->push_back(wgtval);
+			sumScaleWeights->Fill(double(iwgt),(*scaleWeights)[iwgt]);
+	  	}
+	}
+	
+	if (lheInfo->weights().size()>=108) 
+	{
+		
+	  	for (unsigned int iwgt=9; iwgt<109; ++iwgt) 
+		{
+			double wgtval = lheInfo->weights()[iwgt].wgt/nomlheweight;
+	    		pdfWeights->push_back(wgtval);
+			sumPdfWeights->Fill(double(iwgt-9),(*pdfWeights)[iwgt-9]);
+		}
+	}
+
 //genJets
 	fillGenJets();
 	
@@ -68,6 +99,8 @@ void GenPhotonTuplizer::loadEvent(const edm::Event& iEvent, const edm::EventSetu
 	iEvent.getByToken(genParticlesToken_,genParticles);
 	iEvent.getByToken(genJetsToken_,genJets);
 	iEvent.getByToken(genInfoToken_,genInfo);
+	iEvent.getByToken(lheInfoToken_, lheInfo);
+
 }
 
 
@@ -105,6 +138,7 @@ void GenPhotonTuplizer::setBranches()
 	genJetEta = new std::vector<float>;
 	genJetPhi = new std::vector<float>;
 	genJetIsFromHiggsPhoton = new std::vector<bool>;
+	genJetNumberOfDaughters = new std::vector<int>;
 
 	genParticleMotherId = new std::vector<int>;
 	genParticleMotherIndex = new std::vector<int>;
@@ -116,12 +150,16 @@ void GenPhotonTuplizer::setBranches()
 	genParticlePt = new std::vector<float>;
 	genParticleEta = new std::vector<float>;
 	genParticlePhi = new std::vector<float>;
+	
+	scaleWeights = new std::vector<float>; scaleWeights->clear();
+	pdfWeights = new std::vector<float>; pdfWeights->clear();
 
 	genJetE->clear();
 	genJetPt->clear();
 	genJetEta->clear();
 	genJetPhi->clear();
 	genJetIsFromHiggsPhoton->clear();
+	genJetNumberOfDaughters->clear();
 	
 	genParticleMotherId->clear();
 	genParticleMotherIndex->clear();
@@ -139,14 +177,18 @@ void GenPhotonTuplizer::setBranches()
   	GenEvents->Branch("lumiNum", &lumiNum, "lumiNum/i");
   	GenEvents->Branch("eventNum", &eventNum, "eventNum/i");
 	GenEvents->Branch("genWeight", &genWeight, "genWeight/F");
+	GenEvents->Branch("scaleWeights", "vector<float>",&scaleWeights);
+	GenEvents->Branch("pdfWeights", "vector<float>",&pdfWeights);
   	GenEvents->Branch("nGenParticles", &nGenParticles, "nGenParticles/I");
   	GenEvents->Branch("nGenJets", &nGenJets, "nGenJets/I");
   	GenEvents->Branch("nGenJets_cut", &nGenJets_cut, "nGenJets_cut/I");
+  	GenEvents->Branch("nGenJets_cut_noND", &nGenJets_cut_noND, "nGenJets_cut_noND/I");
 	GenEvents->Branch("genJetE", "vector<float>", &genJetE);
 	GenEvents->Branch("genJetPt", "vector<float>", &genJetPt);
 	GenEvents->Branch("genJetEta", "vector<float>", &genJetEta);
 	GenEvents->Branch("genJetPhi", "vector<float>", &genJetPhi);
 	GenEvents->Branch("genJetIsFromHiggsPhoton", "vector<bool>", &genJetIsFromHiggsPhoton);
+	GenEvents->Branch("genJetNumberOfDaughters", "vector<int>", &genJetNumberOfDaughters);
   	
 	GenEvents->Branch("nGenParticles", &nGenParticles, "nGenParticles/I");
 	GenEvents->Branch("genParticleMotherId", "vector<int>", &genParticleMotherId);
@@ -188,14 +230,18 @@ void GenPhotonTuplizer::resetBranches()
 	eventNum = -1;
 
 	genWeight = 1;	
+	scaleWeights->clear();
+	pdfWeights->clear();
 
 	nGenJets = 0;
 	nGenJets_cut = 0;
+	nGenJets_cut_noND = 0;
 	genJetE->clear();
 	genJetPt->clear();
 	genJetEta->clear();
 	genJetPhi->clear();
 	genJetIsFromHiggsPhoton->clear();
+	genJetNumberOfDaughters->clear();
 	
 
 	nGenParticles = 0;
@@ -285,8 +331,19 @@ void GenPhotonTuplizer::fillGenHgg()
 	genHiggs_Eta = higgs.Eta();
 	genHiggs_Phi = higgs.Phi();
 	
-	sumWeights_Hgg->Fill(0.,genWeight);	
+	if(genHiggs_M>10.0)
+	{
+		sumWeights_Hgg->Fill(0.,genWeight);	
+		for (unsigned int iwgt=0; iwgt<scaleWeights->size(); ++iwgt) 
+		{
+      			sumScaleWeights_Hgg->Fill(double(iwgt),(*scaleWeights)[iwgt]);
+		}
 	
+		for (unsigned int iwgt=0; iwgt<pdfWeights->size(); ++iwgt) 
+		{
+      			sumPdfWeights_Hgg->Fill(double(iwgt),(*pdfWeights)[iwgt]);
+		}
+	}
 //gen level isolation
 	float iso_sum_pho1 = 0.0;
 	float iso_sum_pho2 = 0.0;
@@ -316,6 +373,8 @@ void GenPhotonTuplizer::fillGenJets()
 		genJetPhi->push_back(j.phi());
 		nGenJets++;
 		bool fromGenPhoton = false;
+		int numberOfDaughters = j.numberOfDaughters();
+		genJetNumberOfDaughters->push_back(numberOfDaughters);
 
 		std::vector< const reco::GenParticle * > jetGenParticles = j.getGenConstituents();
 		for(size_t i=0; i<jetGenParticles.size();i++)
@@ -340,10 +399,15 @@ void GenPhotonTuplizer::fillGenJets()
 	
 		genJetIsFromHiggsPhoton->push_back(fromGenPhoton);
 
-		if((!fromGenPhoton) && fabs(j.eta())<2.5 && j.pt()>30)
+		if((!fromGenPhoton) && fabs(j.eta())<2.5 && j.pt()>30 && numberOfDaughters>5)
 		{	
 			nGenJets_cut ++;
 		}
+		if((!fromGenPhoton) && fabs(j.eta())<2.5 && j.pt()>30)
+		{	
+			nGenJets_cut_noND ++;
+		}
+
     	}
 
 }

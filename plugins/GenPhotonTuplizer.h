@@ -39,6 +39,7 @@
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 
 
 
@@ -81,6 +82,13 @@ private:
 
 	TH1D *sumWeights;
 	TH1D *sumWeights_Hgg;
+	
+	TH1D *sumScaleWeights;
+	TH1D *sumScaleWeights_Hgg;
+
+	TH1D *sumPdfWeights;
+	TH1D *sumPdfWeights_Hgg;
+
 
  //variables to be saved in the pi0 ntuple
       	uint    runNum;
@@ -88,6 +96,8 @@ private:
       	uint    eventNum;
 
 	float genWeight;
+	vector<float> *scaleWeights;
+	vector<float> *pdfWeights;
 
 	int 	nGenParticles;
 	vector<int> * genParticleMotherId;
@@ -103,11 +113,13 @@ private:
 
 	int nGenJets;
 	int nGenJets_cut;
+	int nGenJets_cut_noND;
 	vector<float> * genJetE;
 	vector<float> * genJetPt;
 	vector<float> * genJetEta;
 	vector<float> * genJetPhi;
 	vector<bool> * genJetIsFromHiggsPhoton;
+	vector<int> * genJetNumberOfDaughters;
 
 
 	float genHiggs_pho1_E;		
@@ -132,11 +144,13 @@ private:
  	edm::EDGetTokenT<reco::GenParticleCollection> genParticlesToken_;
  	edm::EDGetTokenT<reco::GenJetCollection> genJetsToken_;
  	edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
+	edm::EDGetTokenT<LHEEventProduct> lheInfoToken_;
 	
  //input collections
  	edm::Handle<reco::GenParticleCollection> genParticles;
  	edm::Handle<reco::GenJetCollection> genJets;
 	edm::Handle<GenEventInfoProduct> genInfo;
+	edm::Handle<LHEEventProduct> lheInfo;
 
  //cuts and options
  	const float isoConeSize = 0.3;

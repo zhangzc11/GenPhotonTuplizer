@@ -22,7 +22,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.GlobalTag.globaltag = 'MCRUN2_71_V1::All'
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
@@ -48,8 +48,8 @@ process.TFileService = cms.Service("TFileService",
 process.ntuples = cms.EDAnalyzer('GenPhotonTuplizer',
 genParticles = cms.InputTag("genParticles"),
 genJets = cms.InputTag("ak4GenJets"),
-genInfo = cms.InputTag("generator", "", "GEN")
-#lheInfo = cms.InputTag("externalLHEProducer", "", "LHE"),
+genInfo = cms.InputTag("generator", "", "GEN"),
+lheInfo = cms.InputTag("externalLHEProducer", "", "LHE")
 )
 
 #define path
